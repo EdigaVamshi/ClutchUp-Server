@@ -152,9 +152,11 @@ app.post('/login', async (req, res) => {
                 const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '2h' });
                 return res.json({ success: true, message: 'User exist', token, role: user.role });
             } else {
-                return res.json({ success: false, message: 'Invalid crendentials' });
+                // Only return success: false for invalid credentials
+                return res.json({ success: false, message: 'Invalid credentials' });
             }
         } else {
+            // Only return success: false for user not found
             res.status(400).json({ success: false, message: 'User not found' });
         }
     } catch (err) {
