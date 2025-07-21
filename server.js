@@ -189,7 +189,7 @@ app.post('/create-order', async (req, res) => {
     try {
         const { _id, currency = 'INR', receipt, notes } = req.body;
 
-        const match = await ValorantMatch.find({ _id: _id });
+        const match = await ValorantMatch.findOne({ _id: _id });
         if (!match) {
             return res.status(404).json({ success: false, message: 'Match not found' });
         }
