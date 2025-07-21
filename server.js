@@ -101,7 +101,7 @@ app.post('/send-otp', async (req, res) => {
 
 app.post('/verify-otp', (req, res) => {
     const { email, otp } = req.body;
-    if (otpStore[email] && otpStore[email] === otp) {
+    if (otpStore[email] === otp) {
         res.json({ success: true, message: 'OTP verified!' });
     } else {
         res.status(400).json({ success: false, message: 'Invalid OTP' });
@@ -127,10 +127,9 @@ function adminOnly(req, res, next) {
 
 app.post('/register', async (req, res) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password } = req.body;
         const hashedPassword = await bcrypt.hash(password, 12);
-        // Only allow role to be set if provided, otherwise default to 'user'
-        const newUser = new User({ username, email, password: hashedPassword, role: role || 'user' });
+        const newUser = new User({ username, email, password: hashedPassword });
         await newUser.save();
         res.json({ success: true, message: 'Account creation successful' });
     } catch (err) {
