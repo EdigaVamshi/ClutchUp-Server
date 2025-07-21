@@ -188,7 +188,13 @@ app.get('/valorant-matches', async (req, res) => {
 
 app.post('/create-order', async (req, res) => {
     try {
-        const { amount, currency = 'INR', receipt, notes } = req.body;
+        const { _id, currency = 'INR', receipt, notes } = req.body;
+
+        const match = await ValorantMatch.findById(_id);
+        if (!match) {
+            return res.status(404).json({ success: false, message: 'Match not found' });
+        }
+        const amount = match.fee;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ success: false, message: 'Invalid amount' });
