@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); // <-- CRITICAL FIX: Added crypto import
 const Razorpay = require('razorpay');
+const jwt = require('jsonwebtoken');
 
 // Import Mongoose Models
 const User = require('./models/User');
@@ -107,11 +108,29 @@ app.post('/verify-otp', (req, res) => {
     }
 });
 
+// JWT Admin Middleware
+function adminOnly(req, res, next) {
+    const authHeader = req.header('Authorization');
+    if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+    const token = authHeader.replace('Bearer ', '');
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admins only' });
+        }
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+}
+
 app.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, role } = req.body;
         const hashedPassword = await bcrypt.hash(password, 12);
-        const newUser = new User({ username, email, password: hashedPassword });
+        // Only allow role to be set if provided, otherwise default to 'user'
+        const newUser = new User({ username, email, password: hashedPassword, role: role || 'user' });
         await newUser.save();
         res.json({ success: true, message: 'Account creation successful' });
     } catch (err) {
@@ -125,18 +144,15 @@ app.post('/login', async (req, res) => {
         const validUsername = await User.findOne({ username });
         const validEmail = await User.findOne({ email: username });
 
-        if (validUsername || validEmail) {
-            let pw = '';
-            if (validEmail) {
-                pw = validEmail.password;
-            } else {
-                pw = validUsername.password
-            }
-            const validPw = await bcrypt.compare(password, pw);
+        let user = validUsername || validEmail;
+        if (user) {
+            const validPw = await bcrypt.compare(password, user.password);
             if (validPw) {
-                res.json({ success: true, message: 'User exist' });
+                // Issue JWT with role
+                const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '2h' });
+                return res.json({ success: true, message: 'User exist', token, role: user.role });
             } else {
-                res.json({ success: false, message: 'Invalid crendentials' })
+                return res.json({ success: false, message: 'Invalid crendentials' });
             }
         } else {
             res.status(400).json({ success: false, message: 'User not found' });
@@ -157,7 +173,7 @@ app.post('/valorant-matches', async (req, res) => {
     }
 });
 
-app.get('/valorant-matches', async (req, res) => {
+app.get('/valorant-matches', adminOnly, async (req, res) => {
     try {
         const matches = await ValorantMatch.find({});
         res.status(200).json(matches)
