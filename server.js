@@ -175,7 +175,7 @@ app.post('/valorant-matches', async (req, res) => {
     }
 });
 
-app.get('/valorant-matches', adminOnly, async (req, res) => {
+app.get('/valorant-matches', async (req, res) => {
     try {
         const matches = await ValorantMatch.find({});
         res.status(200).json(matches)
