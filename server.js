@@ -141,6 +141,9 @@ function authenticateUser(req, res, next) {
 app.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        if (!password || (password.length < 8 && password.length > 20)) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        }
         const hashedPassword = await bcrypt.hash(password, 12);
         const newUser = new User({ username, email, password: hashedPassword });
         await newUser.save();
