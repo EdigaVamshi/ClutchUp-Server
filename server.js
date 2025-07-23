@@ -125,6 +125,19 @@ function adminOnly(req, res, next) {
     }
 }
 
+function authenticateUser(req, res, next) {
+    const authHeader = req.header('Authorization');
+    if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+    const token = authHeader.replace('Bearer ', '');
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+}
+
 app.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
@@ -185,10 +198,11 @@ app.get('/valorant-matches', async (req, res) => {
 
 // --- Razorpay Payment Endpoints ---
 
-app.post('/create-order', async (req, res) => {
+app.post('/create-order', authenticateUser, async (req, res) => {
     try {
         const { _id, currency = 'INR', receipt, notes } = req.body;
 
+        // Find the match
         const match = await ValorantMatch.findOne({ _id: _id });
         if (!match) {
             return res.status(404).json({ success: false, message: 'Match not found' });
